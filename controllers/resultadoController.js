@@ -1,6 +1,7 @@
 import { connection } from '../db.js';
 
-export async function guardarResultado(req, res) {
+export const guardarResultado = async (req, res) => {
+  console.log("guardarResultado llamado con body:", req.body);
   try {
     let { nombre, puntaje, nivel, preguntas_jugadas } = req.body;
 
@@ -19,17 +20,31 @@ export async function guardarResultado(req, res) {
       [nombre, puntaje, nivel, preguntas_jugadas]
     );
 
+    const [ranking] = await connection.query(
+      'SELECT COUNT(*) + 1 AS posicion FROM resultados WHERE puntaje > ?',
+      [puntaje]
+    );
+
+    const posicion = ranking[0]?.posicion || 1;
+
+    console.log('Respuesta enviada:', {
+      id: resultado.insertId,
+      mensaje: '✅ Resultado guardado con éxito',
+      posicion
+    });
+
     return res.status(201).json({
       id: resultado.insertId,
-      mensaje: '✅ Resultado guardado con éxito'
+      mensaje: '✅ Resultado guardado con éxito',
+      posicion
     });
   } catch (error) {
     console.error('Error guardando resultado:', error.sqlMessage || error.message);
-    res.status(500).json({ error: error.sqlMessage || error.message });
+    return res.status(500).json({ error: error.sqlMessage || error.message });
   }
-}
+};
 
-export async function obtenerResultados(req, res) {
+export const obtenerResultados = async (req, res) => {
   try {
     const [resultados] = await connection.query(
       'SELECT nombre, puntaje, nivel, preguntas_jugadas, fecha FROM resultados ORDER BY puntaje DESC, fecha DESC LIMIT 10'
@@ -44,4 +59,4 @@ export async function obtenerResultados(req, res) {
     console.error('❌ Error obteniendo resultados:', error.sqlMessage || error.message);
     return res.status(500).json({ error: 'Error al obtener resultados' });
   }
-}
+};
